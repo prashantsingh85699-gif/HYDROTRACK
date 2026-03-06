@@ -1,0 +1,163 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  body {
+    @apply font-sans antialiased;
+    background: linear-gradient(135deg, #0a0f1e 0%, #0d1b2a 30%, #0f2937 60%, #0a1628 100%);
+    min-height: 100vh;
+    color: #e2e8f0;
+  }
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.5);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(51, 145, 255, 0.3);
+    border-radius: 3px;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply rounded-xl border backdrop-blur-md;
+    background: rgba(15, 23, 42, 0.6);
+    border-color: rgba(51, 145, 255, 0.12);
+    box-shadow:
+      0 4px 24px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .glass-card:hover {
+    border-color: rgba(51, 145, 255, 0.25);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.3),
+      0 0 0 1px rgba(51, 145, 255, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    transform: translateY(-1px);
+  }
+
+  .status-badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider;
+  }
+  .status-safe {
+    @apply bg-emerald-500/15 text-emerald-400 border border-emerald-500/20;
+  }
+  .status-warning {
+    @apply bg-amber-500/15 text-amber-400 border border-amber-500/20;
+  }
+  .status-critical {
+    @apply bg-red-500/15 text-red-400 border border-red-500/20;
+    animation: criticalPulse 2s ease-in-out infinite;
+  }
+
+  .sensor-value {
+    @apply text-4xl font-bold tracking-tight;
+    text-shadow: 0 0 30px currentColor;
+  }
+
+  .btn-primary {
+    @apply px-6 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200;
+    background: linear-gradient(135deg, #1a6ff5 0%, #3391ff 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(26, 111, 245, 0.3);
+  }
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(26, 111, 245, 0.45);
+  }
+  .btn-primary:active {
+    transform: translateY(0);
+  }
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .btn-danger {
+    @apply px-6 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200;
+    background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+  }
+  .btn-danger:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(220, 38, 38, 0.45);
+  }
+
+  .btn-ghost {
+    @apply px-6 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200;
+    background: rgba(255, 255, 255, 0.05);
+    color: #94a3b8;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+    transform: translateY(-1px);
+  }
+
+  .progress-bar {
+    @apply h-1.5 rounded-full overflow-hidden;
+    background: rgba(255, 255, 255, 0.06);
+  }
+  .progress-fill {
+    @apply h-full rounded-full transition-all duration-700 ease-out;
+  }
+
+  .watermark {
+    position: fixed;
+    bottom: 40px;
+    right: 40px;
+    font-size: 7rem;
+    font-weight: 900;
+    opacity: 0.015;
+    pointer-events: none;
+    user-select: none;
+    z-index: 0;
+    color: #3391ff;
+    letter-spacing: 0.05em;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    background: linear-gradient(135deg, #3391ff, #10b981);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .text-gradient-warn {
+    background: linear-gradient(135deg, #f59e0b, #ef4444);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
+
+@keyframes criticalPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes toastSlideIn {
+  0% { transform: translateX(100%); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes toastSlideOut {
+  0% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(100%); opacity: 0; }
+}
