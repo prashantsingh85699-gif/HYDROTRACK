@@ -1,129 +1,80 @@
 /* ═══════════════════════════════════════════════════════════════════
-   AuthContext — JWT auth state for HydroTrack
-   Access token stored in memory (ref) — never in localStorage.
-   Refresh token lives in httpOnly cookie managed by the server.
+   AuthContext — Static Mock Auth for HydroTrack Prototype
+   Stores users and active session entirely in browser localStorage.
+   No backend server required. Free to host anywhere (GitHub Pages, etc).
    ═══════════════════════════════════════════════════════════════════ */
 
-import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect } from 'react'
 
 const AuthContext = createContext(null)
 
-const API = '/api/auth'
+const delay = (ms) => new Promise(res => setTimeout(res, ms))
 
 export function AuthProvider({ children }) {
-  const [user, setUser]       = useState(null)
-  const [loading, setLoading] = useState(true)   // true while silent-refresh runs on mount
-  const accessTokenRef        = useRef(null)      // in-memory only
-
-  /* ── Helpers ─────────────────────────────────────────────────────── */
-  function setSession(accessToken, userData) {
-    accessTokenRef.current = accessToken
-    setUser(userData)
-  }
-
-  function clearSession() {
-    accessTokenRef.current = null
-    setUser(null)
-  }
-
-  /* ── Public getter for axios/fetch calls ─────────────────────────── */
-  function getAccessToken() {
-    return accessTokenRef.current
-  }
-
-  /* ── Silent refresh on mount (restores session from cookie) ─────── */
-  const silentRefresh = useCallback(async () => {
-    try {
-      const res  = await fetch(`${API}/refresh`, { method: 'POST', credentials: 'include' })
-      const data = await res.json()
-      if (data.success) {
-        setSession(data.accessToken, data.user)
-      } else {
-        clearSession()
-      }
-    } catch {
-      clearSession()
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    silentRefresh()
-  }, [silentRefresh])
-
-  /* ── Auth actions ────────────────────────────────────────────────── */
-  async function register({ name, email, password, confirmPassword }) {
-    const res  = await fetch(`${API}/register`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password, confirmPassword }),
-    })
-    const data = await res.json()
-    if (!data.success) {
-      const msg = data.errors?.[0]?.msg ?? data.message ?? 'Registration failed'
-      throw new Error(msg)
+    const session = localStorage.getItem('hydrotrack_session')
+    if (session) {
+      try {
+        setUser(JSON.parse(session))
+      } catch (err) {
+        localStorage.removeItem('hydrotrack_session')
+      }
     }
-    setSession(data.accessToken, data.user)
-    return data.user
+    setLoading(false)
+  }, [])
+
+  async function register({ name, email, password, confirmPassword }) {
+    await delay(800) // Simulate network request
+    if (password !== confirmPassword) throw new Error("Passwords do not match")
+    if (password.length < 6) throw new Error("Password must be at least 6 characters")
+    
+    const users = JSON.parse(localStorage.getItem('hydrotrack_users') || '[]')
+    if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
+      throw new Error("Email is already registered")
+    }
+
+    const newUser = { id: Date.now().toString(), name, email }
+    users.push({ ...newUser, password }) // Store password just for mock prototype
+    localStorage.setItem('hydrotrack_users', JSON.stringify(users))
+
+    localStorage.setItem('hydrotrack_session', JSON.stringify(newUser))
+    setUser(newUser)
+    return newUser
   }
 
   async function login({ email, password }) {
-    const res  = await fetch(`${API}/login`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    })
-    const data = await res.json()
-    if (!data.success) throw new Error(data.message ?? 'Login failed')
-    setSession(data.accessToken, data.user)
-    return data.user
+    await delay(800) // Simulate network request
+    const users = JSON.parse(localStorage.getItem('hydrotrack_users') || '[]')
+    const found = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password)
+    
+    if (!found) throw new Error("Invalid email or password")
+
+    const sessionUser = { id: found.id, name: found.name, email: found.email }
+    localStorage.setItem('hydrotrack_session', JSON.stringify(sessionUser))
+    setUser(sessionUser)
+    return sessionUser
   }
 
   async function logout() {
-    try {
-      await fetch(`${API}/logout`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { Authorization: `Bearer ${accessTokenRef.current}` },
-      })
-    } catch { /* ignore network errors on logout */ }
-    clearSession()
+    await delay(400)
+    localStorage.removeItem('hydrotrack_session')
+    setUser(null)
+  }
+
+  function getAccessToken() {
+    return 'mock-token-12345'
+  }
+
+  async function authFetch(url, options = {}) {
+    // Just a passthrough for the static prototype
+    return fetch(url, options)
   }
 
   async function refreshAccessToken() {
-    const res  = await fetch(`${API}/refresh`, { method: 'POST', credentials: 'include' })
-    const data = await res.json()
-    if (data.success) {
-      setSession(data.accessToken, data.user)
-      return data.accessToken
-    }
-    clearSession()
-    throw new Error('Session expired')
-  }
-
-  /* ── Authenticated fetch wrapper (auto-retries with new token) ───── */
-  async function authFetch(url, options = {}) {
-    const token = accessTokenRef.current
-    const makeReq = (tkn) => fetch(url, {
-      ...options,
-      credentials: 'include',
-      headers: { ...(options.headers ?? {}), Authorization: `Bearer ${tkn}` },
-    })
-
-    let res = await makeReq(token)
-    if (res.status === 401) {
-      try {
-        const newToken = await refreshAccessToken()
-        res = await makeReq(newToken)
-      } catch {
-        clearSession()
-        throw new Error('Session expired — please log in again')
-      }
-    }
-    return res
+    return 'mock-token-12345'
   }
 
   const value = {
