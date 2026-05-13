@@ -1,80 +1,102 @@
 /* ═══════════════════════════════════════════════════════════════════
-   AuthContext — Static Mock Auth for HydroTrack Prototype
-   Stores users and active session entirely in browser localStorage.
-   No backend server required. Free to host anywhere (GitHub Pages, etc).
+   AuthContext — Firebase Authentication for HydroTrack
+   Uses Firebase Auth with Email/Password for persistent accounts.
+   Accounts are saved permanently in Firebase cloud database.
    ═══════════════════════════════════════════════════════════════════ */
 
 import { createContext, useContext, useState, useEffect } from 'react'
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  updateProfile,
+} from 'firebase/auth'
+import { auth } from '../firebase'
 
 const AuthContext = createContext(null)
 
-const delay = (ms) => new Promise(res => setTimeout(res, ms))
-
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
+  const [user, setUser]       = useState(null)
   const [loading, setLoading] = useState(true)
 
+  /* ── Listen for auth state changes (persists across refreshes) ───── */
   useEffect(() => {
-    const session = localStorage.getItem('hydrotrack_session')
-    if (session) {
-      try {
-        setUser(JSON.parse(session))
-      } catch (err) {
-        localStorage.removeItem('hydrotrack_session')
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        setUser({
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
+          email: firebaseUser.email,
+        })
+      } else {
+        setUser(null)
       }
-    }
-    setLoading(false)
+      setLoading(false)
+    })
+    return () => unsubscribe()
   }, [])
 
+  /* ── Register ────────────────────────────────────────────────────── */
   async function register({ name, email, password, confirmPassword }) {
-    await delay(800) // Simulate network request
-    if (password !== confirmPassword) throw new Error("Passwords do not match")
-    if (password.length < 6) throw new Error("Password must be at least 6 characters")
-    
-    const users = JSON.parse(localStorage.getItem('hydrotrack_users') || '[]')
-    if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
-      throw new Error("Email is already registered")
-    }
+    if (password !== confirmPassword) throw new Error('Passwords do not match')
+    if (password.length < 6) throw new Error('Password must be at least 6 characters')
 
-    const newUser = { id: Date.now().toString(), name, email }
-    users.push({ ...newUser, password }) // Store password just for mock prototype
-    localStorage.setItem('hydrotrack_users', JSON.stringify(users))
+    const cred = await createUserWithEmailAndPassword(auth, email, password)
 
-    localStorage.setItem('hydrotrack_session', JSON.stringify(newUser))
-    setUser(newUser)
-    return newUser
+    // Save display name to the Firebase profile
+    await updateProfile(cred.user, { displayName: name })
+
+    const userData = { id: cred.user.uid, name, email: cred.user.email }
+    setUser(userData)
+    return userData
   }
 
+  /* ── Login ───────────────────────────────────────────────────────── */
   async function login({ email, password }) {
-    await delay(800) // Simulate network request
-    const users = JSON.parse(localStorage.getItem('hydrotrack_users') || '[]')
-    const found = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password)
-    
-    if (!found) throw new Error("Invalid email or password")
-
-    const sessionUser = { id: found.id, name: found.name, email: found.email }
-    localStorage.setItem('hydrotrack_session', JSON.stringify(sessionUser))
-    setUser(sessionUser)
-    return sessionUser
+    try {
+      const cred = await signInWithEmailAndPassword(auth, email, password)
+      const userData = {
+        id: cred.user.uid,
+        name: cred.user.displayName || cred.user.email.split('@')[0],
+        email: cred.user.email,
+      }
+      setUser(userData)
+      return userData
+    } catch (err) {
+      // Map Firebase error codes to user-friendly messages
+      const code = err.code
+      if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+        throw new Error('Invalid email or password')
+      } else if (code === 'auth/too-many-requests') {
+        throw new Error('Too many failed attempts. Please try again later.')
+      } else {
+        throw new Error(err.message || 'Login failed')
+      }
+    }
   }
 
+  /* ── Logout ──────────────────────────────────────────────────────── */
   async function logout() {
-    await delay(400)
-    localStorage.removeItem('hydrotrack_session')
+    await signOut(auth)
     setUser(null)
   }
 
+  /* ── Compatibility helpers (kept for existing components) ────────── */
   function getAccessToken() {
-    return 'mock-token-12345'
+    return auth.currentUser?.accessToken || null
   }
 
   async function authFetch(url, options = {}) {
-    // Just a passthrough for the static prototype
-    return fetch(url, options)
+    const token = await auth.currentUser?.getIdToken()
+    return fetch(url, {
+      ...options,
+      headers: { ...(options.headers ?? {}), Authorization: `Bearer ${token}` },
+    })
   }
 
   async function refreshAccessToken() {
-    return 'mock-token-12345'
+    return auth.currentUser?.getIdToken(true)
   }
 
   const value = {
