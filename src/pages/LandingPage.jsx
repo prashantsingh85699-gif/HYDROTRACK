@@ -1,7 +1,8 @@
 import { useRef, useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Cpu, ShieldCheck, Zap, Droplets, Activity, Database, Users, User, Menu, X, ArrowRight, BarChart3, Mail, MapPin } from 'lucide-react'
+import { Cpu, ShieldCheck, Zap, Droplets, Activity, Database, Users, User, Menu, X, ArrowRight, BarChart3, Mail, MapPin, LogOut } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 
 /* ═══════════════════════════════════════════════════════════════════
    LandingPage — Full Single Page Application Style Landing
@@ -94,8 +95,14 @@ const NAV_LINKS = ['Home', 'About', 'Features', 'Architecture', 'Demo', 'Team', 
 
 function TopNavbar() {
   const navigate = useNavigate()
+  const { logout, user } = useAuth()
   const [activeSection, setActiveSection] = useState('home')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  async function handleLogout() {
+    await logout()
+    navigate('/login', { replace: true })
+  }
 
   // Scroll spy
   useEffect(() => {
@@ -182,16 +189,29 @@ function TopNavbar() {
         </nav>
 
         {/* Action / Mobile Toggle */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <motion.button  onClick={() => navigate('/dashboard')}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <motion.button onClick={() => navigate('/dashboard')}
             whileHover={{ scale: 1.03, boxShadow: '0 4px 15px rgba(0,184,169,0.3)' }} whileTap={{ scale: 0.97 }}
             style={{
               display: 'none', padding: '10px 24px', borderRadius: '12px', fontSize: '13px', fontWeight: 700,
               color: '#ffffff', background: '#00B8A9', border: 'none',
               cursor: 'pointer', letterSpacing: '0.04em'
             }} className="md-block">
-            Get Started
+            Dashboard
           </motion.button>
+
+          {/* Logout Button — Desktop */}
+          {user && (
+            <motion.button onClick={handleLogout}
+              whileHover={{ scale: 1.03, boxShadow: '0 4px 15px rgba(239,68,68,0.25)' }} whileTap={{ scale: 0.97 }}
+              style={{
+                display: 'none', padding: '10px 20px', borderRadius: '12px', fontSize: '13px', fontWeight: 700,
+                color: '#ffffff', background: '#ef4444', border: 'none',
+                cursor: 'pointer', letterSpacing: '0.04em', alignItems: 'center', gap: '6px',
+              }} className="md-flex-btn">
+              <LogOut size={15} /> Logout
+            </motion.button>
+          )}
           
           <button className="md-hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} style={{ all: 'unset', cursor: 'pointer', color: '#0f172a' }}>
             {mobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
@@ -215,15 +235,20 @@ function TopNavbar() {
                 {link}
               </span>
             ))}
-            <button onClick={() => navigate('/dashboard')} style={{ padding: '14px', borderRadius: '12px', background: '#00B8A9', color: '#ffffff', fontWeight: 800, marginTop: '10px', textAlign: 'center', border: 'none' }}>
+            <button onClick={() => navigate('/dashboard')} style={{ padding: '14px', borderRadius: '12px', background: '#00B8A9', color: '#ffffff', fontWeight: 800, marginTop: '10px', textAlign: 'center', border: 'none', cursor: 'pointer' }}>
               Launch Dashboard
             </button>
+            {user && (
+              <button onClick={handleLogout} style={{ padding: '14px', borderRadius: '12px', background: '#ef4444', color: '#ffffff', fontWeight: 800, marginTop: '6px', textAlign: 'center', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <LogOut size={16} /> Logout
+              </button>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
 
       <style>{`
-        @media (min-width: 768px) { .md-flex { display: flex !important; } .md-block { display: block !important; } .md-hidden { display: none !important; } }
+        @media (min-width: 768px) { .md-flex { display: flex !important; } .md-block { display: block !important; } .md-flex-btn { display: inline-flex !important; } .md-hidden { display: none !important; } }
       `}</style>
     </>
   )
