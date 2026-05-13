@@ -10,6 +10,7 @@ const cookieParser = require('cookie-parser')
 const rateLimit  = require('express-rate-limit')
 const mongoose   = require('mongoose')
 const authRoutes = require('./routes/auth')
+const path       = require('path')
 
 const app  = express()
 const PORT = process.env.PORT || 5001
@@ -38,6 +39,13 @@ app.use('/api/auth', rateLimit({
 app.use('/api/auth', authRoutes)
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date() }))
+
+/* ── Serve Static Frontend (Render/Production) ─────────────────────── */
+app.use(express.static(path.join(__dirname, '../dist')))
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dist/index.html'))
+})
 
 /* ── DB + Server bootstrap ─────────────────────────────────────────── */
 async function startServer() {
